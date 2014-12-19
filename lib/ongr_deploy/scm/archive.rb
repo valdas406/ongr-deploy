@@ -6,7 +6,7 @@ module OngrDeploy
 
   module Capistrano
 
-  class Archive < ::Capistrano::SCM
+    class Archive < ::Capistrano::SCM
 
       module DefaultStrategy
 
