@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 
-require 'ongr_deploy/application'
+require "ongr_deploy/application"
 
 OngrDeploy::Application.new.run

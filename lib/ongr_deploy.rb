@@ -1,6 +1,6 @@
 module OngrDeploy
 
-  def setup
+  def ongr_setup
     set :stage_config_path,  "app/deploy"
     set :deploy_config_path, "app/deploy.rb"
 
@@ -15,7 +15,11 @@ module OngrDeploy
         load deploy_config_path
         load stage_config_path.join "#{stage}.rb"
 
-        load File.expand_path( "../ongr_deploy/scm/#{fetch( :scm )}.rb", __FILE__ )
+        begin
+          load File.expand_path( "../ongr_deploy/scm/#{fetch( :scm )}.rb", __FILE__ )
+        rescue LoadError
+          load "capistrano/#{fetch( :scm )}.rb"
+        end
 
         I18n.locale = fetch :locale, :en
 
@@ -28,4 +32,4 @@ end
 
 self.extend OngrDeploy
 
-setup
+ongr_setup
