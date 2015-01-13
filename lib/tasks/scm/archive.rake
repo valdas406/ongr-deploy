@@ -12,16 +12,34 @@ namespace :archive do
     end
   end
 
-  task :pack_release do
-    set :archive_name, "#{fetch( :application )}_#{fetch( :branch )}.tar.gz"
+  task :set_archive do
+    run_locally do
+      set :archive_revision, capture( "git", "rev-parse --short #{fetch( :branch )}" ).chomp
+    end
+
+    set :archive_name, "#{fetch( :application )}_#{fetch( :branch )}_#{fetch(:archive_revision)}.tar.gz"
     set :archive_path, "#{fetch( :tmp_dir )}/#{fetch( :archive_name )}"
+  end
+
+  task pack_release: :set_archive do
+    exclude = []
+
+    fetch( :archive_exclude, [] ).each do |e|
+      exclude << "--exclude=#{e}"
+    end
 
     run_locally do
-      execute "tar", "-c", "-z", "-f", fetch( :archive_path ), "."
+      execute "tar", "-c", "-z", "-f", fetch( :archive_path ), exclude.join( " " ), "."
     end
   end
 
-  task create_release: :pack_release do
+  task create_release: :set_archive do
+    run_locally do
+      unless test "[ -f #{fetch( :archive_path )} ]"
+        invoke :"archive:pack_release"
+      end
+    end
+
     on release_roles :all do
       execute :mkdir, "-p", release_path
       upload! fetch( :archive_path ), repo_path
