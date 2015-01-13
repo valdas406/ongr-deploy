@@ -14,11 +14,11 @@ namespace :archive do
 
   task :set_archive do
     run_locally do
-      set :archive_revision, capture( "git", "rev-parse --short #{fetch( :branch )}" ).chomp
+      set :archive_revision, capture( "git", "rev-parse --short origin/#{fetch( :branch )}" ).chomp
     end
 
-    set :archive_name, "#{fetch( :application )}_#{fetch( :branch )}_#{fetch(:archive_revision)}.tar.gz"
-    set :archive_path, "#{fetch( :tmp_dir )}/#{fetch( :archive_name )}"
+    set :archive_name, [fetch( :application ),fetch( :branch ),fetch( :archive_revision )].join( "_" ) << ".tar.gz"
+    set :archive_path, [fetch( :tmp_dir ),fetch( :archive_name )].join "/"
   end
 
   task pack_release: :set_archive do
