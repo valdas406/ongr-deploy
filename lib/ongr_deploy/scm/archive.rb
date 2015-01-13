@@ -15,7 +15,7 @@ module OngrDeploy
         end
 
         def fetch_revision
-          context.capture :git, "rev-parse --short #{fetch :branch}"
+          context.capture :git, "rev-parse --short origin/#{fetch :branch}"
         end
 
       end
