@@ -56,8 +56,6 @@ namespace :archive do
       end
     end
 
-    exit
-
     on release_roles :all do
       execute :mkdir, "-p", release_path
       upload! "#{fetch :cache_path}/current", repo_path
