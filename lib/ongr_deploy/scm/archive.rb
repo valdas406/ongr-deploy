@@ -11,11 +11,11 @@ module OngrDeploy
       module DefaultStrategy
 
         def release
-          context.execute "tar", "-x", "-z", "-f", "#{repo_path}/#{fetch( :archive_name )}", "-C", release_path
+          context.execute :tar, "-xzf", "#{repo_path}/current", "-C", release_path
         end
 
         def fetch_revision
-          context.capture "git", "rev-parse --short #{fetch( :branch )}"
+          context.capture :git, "rev-parse --short #{fetch :branch}"
         end
 
       end

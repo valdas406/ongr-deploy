@@ -77,7 +77,7 @@ namespace :archive do
       releases.reject! { |r| r =~ /current/ }
 
       if releases.count >= fetch( :keep_releases )
-        expired = releases - releases.last( fetch( :keep_releases ) )
+        expired = releases - releases.last( fetch :keep_releases )
 
         if expired.any?
           execute :rm, "-rf", expired.join( " " )
