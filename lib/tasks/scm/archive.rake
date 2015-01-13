@@ -18,7 +18,7 @@ namespace :archive do
     end
 
     set :archive_name, [fetch( :application ),fetch( :branch ),fetch( :archive_revision )].join( "_" ) << ".tar.gz"
-    set :archive_path, [fetch( :tmp_dir ),fetch( :archive_name )].join "/"
+    set :archive_path, [fetch( :tmp_dir ),fetch( :archive_name )].join( "/" )
   end
 
   task pack_release: :set_archive do
