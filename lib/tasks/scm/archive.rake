@@ -80,7 +80,9 @@ namespace :archive do
         expired = releases - releases.last( fetch :keep_releases )
 
         if expired.any?
-          execute :rm, "-rf", expired.join( " " )
+          within fetch( :cache_path ) do
+            execute :rm, "-rf", expired.join( " " )
+          end
         end
       end
     end
