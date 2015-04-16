@@ -61,7 +61,7 @@ namespace :rsync do
       execute :mkdir, "-p", release_path
 
       run_locally do
-        execute :rsync, "-crlpz", "--delete", "#{fetch :cache_path}/current/", "#{host.username}@#{host.hostname}:#{repo_path}"
+        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :cache_path}/current/", "#{host.username}@#{host.hostname}:#{repo_path}"
       end
 
       strategy.release
