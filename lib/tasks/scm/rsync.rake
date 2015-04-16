@@ -1,8 +1,8 @@
-namespace :archive do
+namespace :rsync do
 
   def strategy
-    @strategy ||= OngrDeploy::Capistrano::Archive.new(
-        self, fetch( :strategy, OngrDeploy::Capistrano::Archive::DefaultStrategy )
+    @strategy ||= OngrDeploy::Capistrano::Rsync.new(
+        self, fetch( :strategy, OngrDeploy::Capistrano::Rsync::DefaultStrategy )
       )
   end
 
@@ -24,17 +24,18 @@ namespace :archive do
     exclude = []
 
     fetch( :exclude, [] ).each do |e|
-      exclude << "--exclude=#{e}"
+      exclude << "'#{e}'"
     end
 
-    set :archive_path, "#{fetch :cache_path}/#{fetch :application}_#{fetch :origin_revision}.tar.gz"
+    set :archive_path, "#{fetch :cache_path}/#{fetch :origin_revision}"
 
     run_locally do
-      execute :tar, "-c", "-z", "-f", fetch( :archive_path ), exclude.join( " " ), "."
-      execute :ln, "-f", "-s", fetch( :archive_path ), "#{fetch :cache_path}/current"
+      execute :mkdir, "-p", fetch( :archive_path )
+      execute :rsync, "-rlp", "--exclude={#{exclude.join( "," )}}", ".", fetch( :archive_path )
+      execute :ln, "-fs", fetch( :archive_path ), "#{fetch :cache_path}/current"
     end
 
-    invoke :"archive:cleanup"
+    invoke :"rsync:cleanup"
   end
 
   task :create_release do
@@ -50,15 +51,19 @@ namespace :archive do
     end
 
     run_locally do
-      unless test "[ -f #{fetch :cache_path}/current ]"
+      unless test "[ -d #{fetch :cache_path}/current ]"
         error "Cache symlink is broken"
         exit 1
       end
     end
 
-    on release_roles :all do
+    on release_roles :all do |host|
       execute :mkdir, "-p", release_path
-      upload! "#{fetch :cache_path}/current", repo_path
+
+      run_locally do
+        execute :rsync, "-crlpz", "--delete", "#{fetch :cache_path}/current/", "#{host.username}@#{host.hostname}:#{repo_path}"
+      end
+
       strategy.release
     end
   end
@@ -94,7 +99,7 @@ namespace :deploy do
 
   task :pack do
     invoke :"deploy:check"
-    invoke :"archive:pack_release"
+    invoke :"rsync:pack_release"
   end
 
 end
