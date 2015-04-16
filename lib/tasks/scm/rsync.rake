@@ -24,14 +24,14 @@ namespace :rsync do
     exclude = []
 
     fetch( :exclude, [] ).each do |e|
-      exclude << "'#{e}'"
+      exclude << "--exclude=#{e}"
     end
 
     set :archive_path, "#{fetch :cache_path}/#{fetch :origin_revision}/"
 
     run_locally do
       execute :mkdir, "-p", fetch( :archive_path )
-      execute :rsync, "-rlp", "--delete", "--delete-excluded", "--exclude={#{exclude.join( "," )}}", "./", fetch( :archive_path )
+      execute :rsync, "-rlp", "--delete", "--delete-excluded", exclude.join( " " ), "./", fetch( :archive_path )
       execute :rm, "-f", "#{fetch :cache_path}/current"
       execute :ln, "-s", fetch( :archive_path ), "#{fetch :cache_path}/current"
     end
