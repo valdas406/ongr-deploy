@@ -8,11 +8,10 @@ Gem::Specification.new do |s|
   s.name    = "ongr_deploy"
   s.version = OngrDeploy::VERSION
   s.authors = ["Voldemaras Kadys"]
-  s.email   = ["voldemaras.kadys@hometogo.com"]
   s.summary = "Capistrano extension for Symfony2 & ONGR projects"
   s.license = "MIT"
 
-  s.files       = Dir["{bin,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc"]
+  s.files       = Dir["{bin,lib}/**/*", "LICENSE", "Rakefile", "README.rdoc"]
   s.executables = ['ongr']
   s.test_files  = Dir["test/**/*"]
 
