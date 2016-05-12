@@ -125,9 +125,9 @@ namespace :deploy do
 
         content = StringIO.new dist.to_yaml
 
-        execute "cp", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml.new", "#{fetch(:deploy_to)}/shared/app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml.new"
-        upload! content, "#{fetch(:deploy_to)}/shared/app/config/parameters.yml.new"
-        execute "chmod", "664", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml.new"
+        execute "cp", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml", "#{fetch(:deploy_to)}/shared/app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
+        upload! content, "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
+        execute "chmod", "664", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
       end
     end
   end
