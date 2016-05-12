@@ -19,5 +19,6 @@ Gem::Specification.new do |s|
 
   s.add_dependency "capistrano", "~> 3.3.0"
   s.add_dependency "aws-sdk",    "~> 2.2.0"
+  s.add_dependency "deep_merge", "~> 1.0.0"
 
 end
