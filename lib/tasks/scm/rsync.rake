@@ -107,11 +107,10 @@ namespace :deploy do
   end
 
   task :genconf do
-    dist = YAML::load File.read( "app/config/parameters.yml.dist" )
-
     on release_roles :all do
       within release_path do
         fqdn      = capture :hostname, "-f"
+        dist      = YAML::load File.read( "app/config/parameters.yml.dist" )
         dist_env  = fqdn.include?( "stage" ) ? "stage" : "live"
         dist_list = ["parameters.yml.#{dist_env}", "parameters.yml.#{dist_env}.#{fqdn[/([a-z\-]+)/,1]}"]
 
