@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ongr_deploy (0.0.11)
+    ongr_deploy (0.0.13)
       aws-sdk (~> 2.2.0)
       capistrano (~> 3.3.0)
       deep_merge (~> 1.0.0)
