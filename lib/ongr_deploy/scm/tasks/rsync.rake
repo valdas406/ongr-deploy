@@ -1,13 +1,9 @@
 require "yaml"
 require "deep_merge"
 
-namespace :rsync do
+rsync_plugin = self
 
-  def strategy
-    @strategy ||= OngrDeploy::Capistrano::Rsync.new(
-        self, fetch( :strategy, OngrDeploy::Capistrano::Rsync::DefaultStrategy )
-      )
-  end
+namespace :rsync do
 
   task :check do
     set :cache_path, "#{fetch :tmp_dir}/#{fetch :application}/#{fetch :branch }"
@@ -51,7 +47,7 @@ namespace :rsync do
         end
       end
     else
-      invoke :"archive:pack_release"
+      invoke :"rsync:pack_release"
     end
 
     run_locally do
@@ -67,15 +63,17 @@ namespace :rsync do
       run_locally do
         execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :cache_path}/current/", "#{host.username}@#{host.hostname}:#{repo_path}"
       end
+    end
 
-      strategy.release
+    on release_roles :all do |host|
+      rsync_plugin.release
     end
   end
 
   task :set_current_revision do
     on release_roles :all do
-      within release_path do
-        set :current_revision, strategy.fetch_revision
+      within repo_path do
+        set :current_revision, rsync_plugin.fetch_revision
       end
     end
   end

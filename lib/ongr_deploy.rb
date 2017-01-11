@@ -1,7 +1,6 @@
-require "ongr_deploy/core"
 require "ongr_deploy/aws"
 
-self.extend OngrDeploy::Core
-self.extend OngrDeploy::Aws
+set :stage_config_path,  "app/deploy"
+set :deploy_config_path, "app/deploy.rb"
 
-ongr_setup
+self.extend OngrDeploy::Aws

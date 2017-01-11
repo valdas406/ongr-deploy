@@ -12,13 +12,12 @@ module OngrDeploy
         }
       )
 
-      ec2_client       = ::Aws::EC2::Client.new
-      autoscale_client = ::Aws::AutoScaling::Client.new
-
       autoscale = ::Aws::AutoScaling::AutoScalingGroup.new name, autoscale_client
 
       autoscale.instances.each do |i|
-        instance = ::Aws::EC2::Instance.new i.id, client: ec2_client
+        next if i.lifecycle_state != "InService" || i.health_status != "Healthy"
+
+        instance = ::Aws::EC2::Instance.new i.id
 
         server instance.private_ip_address, *args
       end

@@ -10,9 +10,9 @@ task :install do
   deploy_dir = config_dir.join "deploy"
   tasks_dir  = config_dir.join "tasks"
 
-  deploy_rb = File.expand_path "../../sample/deploy.rb", __FILE__
-  stage_rb  = File.expand_path "../../sample/stage.rb", __FILE__
-  capfile   = File.expand_path "../../sample/Capfile", __FILE__
+  deploy_rb = File.expand_path "../../templates/deploy.rb", __FILE__
+  stage_rb  = File.expand_path "../../templates/stage.rb", __FILE__
+  capfile   = File.expand_path "../../templates/Capfile", __FILE__
 
   mkdir_p deploy_dir
   mkdir_p tasks_dir

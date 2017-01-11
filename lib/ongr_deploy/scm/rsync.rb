@@ -1,21 +1,32 @@
-require "capistrano/scm"
-
-load File.expand_path( "../../../tasks/scm/rsync.rake", __FILE__ )
+require "capistrano/scm/plugin"
 
 module OngrDeploy
 
   module Capistrano
 
-    class Rsync < ::Capistrano::SCM
+    class SCM
 
-      module DefaultStrategy
+      class Rsync < ::Capistrano::SCM::Plugin
+
+        def set_defaults
+        end
+
+        def define_tasks
+          eval_rakefile File.expand_path( "../tasks/rsync.rake", __FILE__ )
+        end
+
+        def register_hooks
+          before "deploy:check", "rsync:check"
+          after "deploy:new_release_path", "rsync:create_release"
+          before "deploy:set_current_revision", "rsync:set_current_revision"
+        end
 
         def release
-          context.execute :cp, "-R", "#{repo_path}/.", release_path
+          backend.execute :cp, "-R", "#{repo_path}/.", release_path
         end
 
         def fetch_revision
-          "" # context.capture :git, "rev-parse --short origin/#{fetch :branch}"
+          "####" # backend.capture :cat, "version.txt"
         end
 
       end

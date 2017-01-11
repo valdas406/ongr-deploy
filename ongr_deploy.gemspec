@@ -17,8 +17,8 @@ Gem::Specification.new do |s|
   s.executables = ['ongr']
   s.test_files  = Dir["test/**/*"]
 
-  s.add_dependency "capistrano", "~> 3.6.0"
-  s.add_dependency "aws-sdk",    "~> 2.2.0"
+  s.add_dependency "capistrano", "~> 3.7.0"
+  s.add_dependency "aws-sdk",    "~> 2.6.0"
   s.add_dependency "deep_merge", "~> 1.0.0"
 
 end
