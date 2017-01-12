@@ -17,6 +17,7 @@ module OngrDeploy
 
         def register_hooks
           before "deploy:check", "rsync:check"
+          before "deploy:check:linked_files", "rsync:create_params"
           after "deploy:new_release_path", "rsync:create_release"
           before "deploy:set_current_revision", "rsync:set_current_revision"
         end
@@ -26,7 +27,7 @@ module OngrDeploy
         end
 
         def fetch_revision
-          "####" # backend.capture :cat, "version.txt"
+          "####"
         end
 
       end

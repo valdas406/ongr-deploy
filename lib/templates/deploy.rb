@@ -37,3 +37,8 @@ append :linked_dirs, "app/logs"
 # set :aws_region, "xxx"
 # set :aws_id, "xxx"
 # set :aws_secret, "xxx"
+
+## ONGR Extensions
+
+# set :archive_cache, false
+# set :ongr_create_params, false

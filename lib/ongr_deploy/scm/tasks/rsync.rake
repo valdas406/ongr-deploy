@@ -7,11 +7,30 @@ namespace :rsync do
 
   task :check do
     set :cache_path, "#{fetch :tmp_dir}/#{fetch :application}/#{fetch :branch }"
+    set :local_release_path, "#{fetch :cache_path}/current"
 
     run_locally do
       set :origin_revision, capture( :git, "rev-parse --short origin/#{fetch :branch }" ).chomp
 
       execute :mkdir, "-p", fetch( :cache_path )
+    end
+
+    if fetch( :archive_cache, false )
+      run_locally do
+        unless test "[ -L #{fetch :cache_path}/current ]"
+          error "Deploy only allowed for already packed releases"
+          exit 1
+        end
+      end
+    else
+      invoke :"rsync:pack_release"
+    end
+
+    run_locally do
+      unless test "[ -d #{fetch :cache_path}/current ]"
+        error "Cache symlink is broken"
+        exit 1
+      end
     end
 
     on release_roles :all do
@@ -38,40 +57,69 @@ namespace :rsync do
     invoke :"rsync:cleanup"
   end
 
-  task :create_release do
-    if fetch( :archive_cache, false )
-      run_locally do
-        unless test "[ -L #{fetch :cache_path}/current ]"
-          error "Deploy only allowed for already packed releases"
-          exit 1
+  task :create_params do
+    if fetch :ongr_create_params, false
+      params = nil
+
+      Dir.chdir fetch( :local_release_path ) do
+        unless File.exists? "app/config/parameters.yml.dist"
+          fail "parameters.yml.dist NOT FOUND"
+        end
+
+        params = YAML::load File.read( "app/config/parameters.yml.dist" )
+
+        unless params
+          fail "SYNTAX ERROR ON YML FILE parameters.yml.dist"
         end
       end
-    else
-      invoke :"rsync:pack_release"
-    end
 
-    run_locally do
-      unless test "[ -d #{fetch :cache_path}/current ]"
-        error "Cache symlink is broken"
-        exit 1
+      on release_roles( :all ) do
+        fqdn = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
+
+        Dir.chdir fetch( :local_release_path ) do
+          ["parameters.yml.#{fetch :stage}", "parameters.yml.#{fetch :stage}.#{fqdn}"].each do |yml|
+            if File.exists? "app/config/#{yml}"
+              override = YAML::load File.read "app/config/#{yml}"
+
+              unless override
+                fail "SYNTAX ERROR ON YML FILE #{yml}"
+              end
+
+              params.deep_merge! override
+            end
+          end
+        end
+
+        content = StringIO.new params.to_yaml
+
+        within shared_path do
+          if test "[ -f #{shared_path}/app/config/parameters.yml ]"
+            execute :cp, "app/config/parameters.yml", "app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
+          end
+
+          upload! content, "#{shared_path}/app/config/parameters.yml"
+          execute :chmod, "664", "app/config/parameters.yml"
+        end
       end
     end
+  end
 
-    on release_roles :all do |host|
+  task :create_release do
+    on release_roles( :all ) do |host|
       execute :mkdir, "-p", release_path
 
       run_locally do
-        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :cache_path}/current/", "#{host.username}@#{host.hostname}:#{repo_path}"
+        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :local_release_path}/", "#{host.username}@#{host.hostname}:#{repo_path}"
       end
     end
 
-    on release_roles :all do |host|
+    on release_roles( :all ) do
       rsync_plugin.release
     end
   end
 
   task :set_current_revision do
-    on release_roles :all do
+    on release_roles( :all ) do
       within repo_path do
         set :current_revision, rsync_plugin.fetch_revision
       end
@@ -102,31 +150,6 @@ namespace :deploy do
   task :pack do
     invoke :"deploy:check"
     invoke :"rsync:pack_release"
-  end
-
-  task :genconf do
-    on release_roles :all do
-      within release_path do
-        fqdn      = capture :hostname, "-f"
-        dist      = YAML::load File.read( "app/config/parameters.yml.dist" )
-        dist_env  = fqdn.include?( "stage" ) ? "stage" : "live"
-        dist_list = ["parameters.yml.#{dist_env}", "parameters.yml.#{dist_env}.#{fqdn[/([a-z\-]+)/,1]}"]
-
-        dist_list.each do |df|
-          if File.exists? "app/config/#{df}"
-            overrides = YAML::load File.read( "app/config/#{df}" )
-
-            dist.deep_merge! overrides
-          end
-        end
-
-        content = StringIO.new dist.to_yaml
-
-        execute "cp", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml", "#{fetch(:deploy_to)}/shared/app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
-        upload! content, "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
-        execute "chmod", "664", "#{fetch(:deploy_to)}/shared/app/config/parameters.yml"
-      end
-    end
   end
 
 end
