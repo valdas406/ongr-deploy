@@ -1,4 +1,6 @@
 require "capistrano/scm/plugin"
+require "redis"
+require "redis-namespace"
 
 module OngrDeploy
 
@@ -20,6 +22,26 @@ module OngrDeploy
           before "deploy:check:linked_files", "rsync:create_params"
           after "deploy:new_release_path", "rsync:create_release"
           before "deploy:set_current_revision", "rsync:set_current_revision"
+        end
+
+        def get_redis
+          @redis ||= Redis.new(
+            host: fetch( :redis_host, "localhost" ),
+            port: fetch( :redis_port, 6379 ),
+            db:   fetch( :redis_db, 0 )
+          )
+
+          begin
+            @redis.ping
+          rescue
+            fail "REDIS CONNECTION ERROR"
+          end
+
+          @redis
+        end
+
+        def get_redis_nm
+          @redis_nm ||= Redis::Namespace.new fetch( :cache_namespace ), redis: get_redis
         end
 
         def release

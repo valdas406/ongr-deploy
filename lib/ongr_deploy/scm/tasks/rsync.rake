@@ -5,29 +5,15 @@ rsync_plugin = self
 
 namespace :rsync do
 
-  task :check do
-    set :cache_path, "#{fetch :tmp_dir}/#{fetch :application}/#{fetch :branch }"
-    set :local_release_path, "#{fetch :cache_path}/current"
+  task :init do
+    set_if_empty :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
+    set_if_empty :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+    set_if_empty :local_release_path, "#{fetch :local_base}/current"
+  end
 
+  task check: :init do
     run_locally do
-      set :origin_revision, capture( :git, "rev-parse --short origin/#{fetch :branch }" ).chomp
-
-      execute :mkdir, "-p", fetch( :cache_path )
-    end
-
-    if fetch( :archive_cache, false )
-      run_locally do
-        unless test "[ -L #{fetch :cache_path}/current ]"
-          error "Deploy only allowed for already packed releases"
-          exit 1
-        end
-      end
-    else
-      invoke :"rsync:pack_release"
-    end
-
-    run_locally do
-      unless test "[ -d #{fetch :cache_path}/current ]"
+      unless test "[ -d #{fetch :local_base}/current ]"
         error "Cache symlink is broken"
         exit 1
       end
@@ -36,25 +22,6 @@ namespace :rsync do
     on release_roles :all do
       execute :mkdir, "-p", repo_path
     end
-  end
-
-  task :pack_release do
-    exclude = []
-
-    fetch( :exclude, [] ).each do |e|
-      exclude << "--exclude=#{e}"
-    end
-
-    set :archive_path, "#{fetch :cache_path}/#{fetch :origin_revision}/"
-
-    run_locally do
-      execute :mkdir, "-p", fetch( :archive_path )
-      execute :rsync, "-rlp", "--delete", "--delete-excluded", exclude.join( " " ), "./", fetch( :archive_path )
-      execute :rm, "-f", "#{fetch :cache_path}/current"
-      execute :ln, "-s", fetch( :archive_path ), "#{fetch :cache_path}/current"
-    end
-
-    invoke :"rsync:cleanup"
   end
 
   task :create_params do
@@ -145,11 +112,29 @@ namespace :rsync do
 
 end
 
-namespace :deploy do
+namespace :artifact do
 
-  task :pack do
-    invoke :"deploy:check"
-    invoke :"rsync:pack_release"
+  task :init do
+    set_if_empty :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
+    set_if_empty :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+  end
+
+  task pack: :init do
+    exclude = []
+
+    fetch( :ongr_exclude, [] ).each do |e|
+      exclude << "--exclude=#{e}"
+    end
+
+    set :artifact_timestamp, now
+    set :artifact_path, [fetch( :cache_path ), fetch( :artifact_timestamp )].join( "/" )
+
+    run_locally do
+      execute :mkdir, "-p", fetch( :artifact_path )
+      execute :rsync, "-rlp", "--delete", "--delete-excluded", exclude.join( " " ), "./", fetch( :artifact_path )
+    end
+
+    rsync_plugin.get_redis_nm.hset fetch( :artifact_timestamp ), :pack, true
   end
 
 end

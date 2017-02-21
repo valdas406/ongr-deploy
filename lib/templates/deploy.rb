@@ -38,7 +38,13 @@ append :linked_dirs, "app/logs"
 # set :aws_id, "xxx"
 # set :aws_secret, "xxx"
 
+## Redis Connection
+
+# set :redis_host, "localhost"
+# set :redis_port, 6379
+# set :redis_db, 0
+
 ## ONGR Extensions
 
-# set :archive_cache, false
 # set :ongr_create_params, false
+# set :ongr_exclude, []
