@@ -5,15 +5,36 @@ rsync_plugin = self
 
 namespace :rsync do
 
+  # Extensions
+
   task :init do
-    set_if_empty :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
-    set_if_empty :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
-    set_if_empty :local_release_path, "#{fetch :local_base}/current"
+    set :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
+    set :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+
+    artifact_db = rsync_plugin.get_redis_nm.keys "*"
+
+    fail "ARTIFACT DB IS EMPTY" if artifact_db.empty?
+
+    artifact_db.map! { |i| i.to_i }
+    artifact_db.sort!
+
+    if fetch( :deploying, false )
+      set :artifact_timestamp, artifact_db.last.to_s
+    else
+      artifact_db.keep_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
+
+      fail "MIN RELEASE COUNT IS 2 FOR ROLLBACK" if artifact_db.size < 2
+
+      set :artifact_timestamp, artifact_db[-2].to_s
+      set :delete_timestamp, artifact_db[-1].to_s
+    end
+
+    set :artifact_path, [fetch( :cache_path ), fetch( :artifact_timestamp )].join( "/" )
   end
 
   task check: :init do
     run_locally do
-      unless test "[ -d #{fetch :local_base}/current ]"
+      unless test "[ -d #{fetch :artifact_path} ]"
         error "Cache symlink is broken"
         exit 1
       end
@@ -28,7 +49,7 @@ namespace :rsync do
     if fetch :ongr_create_params, false
       params = nil
 
-      Dir.chdir fetch( :local_release_path ) do
+      Dir.chdir fetch( :artifact_path ) do
         unless File.exists? "app/config/parameters.yml.dist"
           fail "parameters.yml.dist NOT FOUND"
         end
@@ -43,7 +64,7 @@ namespace :rsync do
       on release_roles( :all ) do
         fqdn = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
 
-        Dir.chdir fetch( :local_release_path ) do
+        Dir.chdir fetch( :artifact_path ) do
           ["parameters.yml.#{fetch :stage}", "parameters.yml.#{fetch :stage}.#{fqdn}"].each do |yml|
             if File.exists? "app/config/#{yml}"
               override = YAML::load File.read "app/config/#{yml}"
@@ -72,11 +93,13 @@ namespace :rsync do
   end
 
   task :create_release do
+    set_release_path fetch( :artifact_timestamp )
+
     on release_roles( :all ) do |host|
       execute :mkdir, "-p", release_path
 
       run_locally do
-        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :local_release_path}/", "#{host.username}@#{host.hostname}:#{repo_path}"
+        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :artifact_path}/", "#{host.username}@#{host.hostname}:#{repo_path}"
       end
     end
 
@@ -90,6 +113,16 @@ namespace :rsync do
       within repo_path do
         set :current_revision, rsync_plugin.fetch_revision
       end
+    end
+  end
+
+  task :published do
+    rsync_plugin.get_redis.set fetch( :cache_namespace ), fetch( :artifact_timestamp )
+
+    if fetch( :deploying, false )
+      rsync_plugin.get_redis_nm.hset fetch( :artifact_timestamp ), :deploy, true
+    else
+      rsync_plugin.get_redis_nm.del fetch( :delete_timestamp )
     end
   end
 
@@ -110,13 +143,22 @@ namespace :rsync do
     end
   end
 
+  # Overrides
+
+  task :rollback_release_path do
+    set_release_path fetch( :artifact_timestamp )
+    set :rollback_timestamp, fetch( :artifact_timestamp )
+  end
+
 end
 
 namespace :artifact do
 
   task :init do
-    set_if_empty :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
-    set_if_empty :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+    set :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
+    set :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+    set :artifact_timestamp, now
+    set :artifact_path, [fetch( :cache_path ), fetch( :artifact_timestamp )].join( "/" )
   end
 
   task pack: :init do
@@ -125,9 +167,6 @@ namespace :artifact do
     fetch( :ongr_exclude, [] ).each do |e|
       exclude << "--exclude=#{e}"
     end
-
-    set :artifact_timestamp, now
-    set :artifact_path, [fetch( :cache_path ), fetch( :artifact_timestamp )].join( "/" )
 
     run_locally do
       execute :mkdir, "-p", fetch( :artifact_path )
