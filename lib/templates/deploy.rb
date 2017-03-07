@@ -48,3 +48,4 @@ append :linked_dirs, "app/logs"
 
 # set :ongr_create_params, false
 # set :ongr_exclude, []
+# set :ongr_warmup, []

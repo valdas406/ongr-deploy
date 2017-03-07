@@ -18,8 +18,29 @@ namespace :rsync do
     artifact_db.map! { |i| i.to_i }
     artifact_db.sort!
 
+    run_locally do
+      artifact_db.each do |i|
+        test_path   = [fetch( :cache_path ), i].join( "/" )
+        test_result = test( "[ -d #{test_path} ]" ) ? "OK" : "MISSING"
+
+        puts "CHECKING DB -> ARTIFACT MAPPING #{i} - #{test_result}"
+
+        exit 1 unless test_result == "OK"
+      end
+    end
+
     if fetch( :deploying, false )
-      set :artifact_timestamp, artifact_db.last.to_s
+      autoscale = ENV["AUTOSCALE"]
+
+      if autoscale == "true"
+        artifact_db.keep_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
+
+        set :artifact_timestamp, artifact_db.pop.to_s
+        set :artifact_history, artifact_db
+      else
+        set :artifact_timestamp, artifact_db.pop.to_s
+        set :artifact_history, artifact_db.keep_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
+      end
     else
       artifact_db.keep_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
 
@@ -33,13 +54,6 @@ namespace :rsync do
   end
 
   task check: :init do
-    run_locally do
-      unless test "[ -d #{fetch :artifact_path} ]"
-        error "Cache symlink is broken"
-        exit 1
-      end
-    end
-
     on release_roles :all do
       execute :mkdir, "-p", repo_path
     end
@@ -92,19 +106,46 @@ namespace :rsync do
     end
   end
 
-  task :create_release do
-    set_release_path fetch( :artifact_timestamp )
-
+  task :sync_history do
     on release_roles( :all ) do |host|
-      execute :mkdir, "-p", release_path
+      fetch( :artifact_history, [] ).each do |i|
+        local_path  = [fetch( :cache_path ), i].join "/"
+        remote_path = [releases_path, i].join "/"
 
-      run_locally do
-        execute :rsync, "-crlpz", "--delete", "--stats", "#{fetch :artifact_path}/", "#{host.username}@#{host.hostname}:#{repo_path}"
+        next if test "[ -d #{remote_path} ]"
+
+        run_locally do
+          execute :rsync, "-crlz", "--stats", "#{local_path}/", "#{host.username}@#{host.hostname}:#{remote_path}"
+        end
+
+        execute :chmod, "-R", "g+w", remote_path
       end
     end
+  end
+
+  task :sync_current do
+    on release_roles( :all ) do |host|
+      run_locally do
+        execute :rsync, "-crlz", "--delete", "--stats", "#{fetch :artifact_path}/", "#{host.username}@#{host.hostname}:#{repo_path}"
+      end
+    end
+  end
+
+  task create_release: [:sync_history, :sync_current] do
+    set_release_path fetch( :artifact_timestamp )
 
     on release_roles( :all ) do
+      next if test "[ -d #{release_path} ]"
+
+      execute :mkdir, "-p", release_path
       rsync_plugin.release
+      execute :chmod, "-R", "g+w", release_path
+
+      within release_path do
+        fetch( :ongr_warmup, [] ).each do |i|
+          execute "app/console", "cache:warmup", "-e", i
+        end
+      end
     end
   end
 
@@ -121,6 +162,17 @@ namespace :rsync do
 
     if fetch( :deploying, false )
       rsync_plugin.get_redis_nm.hset fetch( :artifact_timestamp ), :deploy, true
+
+      artifact_db = rsync_plugin.get_redis_nm.keys "*"
+      artifact_db.map! { |i| i.to_i }
+      artifact_db.sort!
+      artifact_db.keep_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
+
+      fetch( :keep_releases ).times { artifact_db.pop }
+
+      artifact_db.each do |i|
+        rsync_plugin.get_redis_nm.del i
+      end
     else
       rsync_plugin.get_redis_nm.del fetch( :delete_timestamp )
     end
