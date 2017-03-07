@@ -12,7 +12,7 @@ module OngrDeploy
         }
       )
 
-      autoscale = ::Aws::AutoScaling::AutoScalingGroup.new name, autoscale_client
+      autoscale = ::Aws::AutoScaling::AutoScalingGroup.new name
 
       autoscale.instances.each do |i|
         next if i.lifecycle_state != "InService" || i.health_status != "Healthy"
