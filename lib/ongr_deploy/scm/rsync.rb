@@ -23,6 +23,7 @@ module OngrDeploy
           before "deploy:check:linked_files", "rsync:create_params"
           after "deploy:new_release_path", "rsync:create_release"
           before "deploy:set_current_revision", "rsync:set_current_revision"
+          after "deploy:updated", "rsync:warmup_release"
           after "deploy:published", "rsync:published"
 
           # Overrides

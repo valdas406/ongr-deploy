@@ -140,12 +140,6 @@ namespace :rsync do
       execute :mkdir, "-p", release_path
       rsync_plugin.release
       execute :chmod, "-R", "g+w", release_path
-
-      within release_path do
-        fetch( :ongr_warmup, [] ).each do |i|
-          execute "app/console", "cache:warmup", "-e", i
-        end
-      end
     end
   end
 
@@ -153,6 +147,17 @@ namespace :rsync do
     on release_roles( :all ) do
       within repo_path do
         set :current_revision, rsync_plugin.fetch_revision
+      end
+    end
+  end
+
+  task :warmup_release do
+    on release_roles( :all ) do
+      within release_path do
+        fetch( :ongr_warmup, [] ).each do |i|
+          next if test "[ -d #{release_path}/app/cache/#{i} ]"
+          execute "app/console", "cache:warmup", "-e", i
+        end
       end
     end
   end
