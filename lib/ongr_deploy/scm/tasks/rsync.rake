@@ -228,6 +228,30 @@ namespace :artifact do
     run_locally do
       execute :mkdir, "-p", fetch( :artifact_path )
       execute :rsync, "-rlp", "--delete", "--delete-excluded", exclude.join( " " ), "./", fetch( :artifact_path )
+
+      if any? :linked_dirs
+        execute :mkdir, "-p", linked_dir_parents( Pathname.new( fetch :artifact_path ) )
+
+        fetch( :linked_dirs ).each do |dir|
+          target = Pathname.new( fetch :artifact_path ).join dir
+          source = shared_path.join dir
+
+          execute :rm, "-rf", target if test "[ -d #{target} ]"
+          execute :ln, "-s", source, target
+        end
+      end
+
+      if any? :linked_files
+        execute :mkdir, "-p", linked_file_dirs( Pathname.new( fetch :artifact_path ) )
+
+        fetch( :linked_files ).each do |file|
+          target = Pathname.new( fetch :artifact_path ).join file
+          source = shared_path.join file
+
+          execute :rm, target if test "[ -f #{target} ]"
+          execute :ln, "-s", source, target
+        end
+      end
     end
 
     rsync_plugin.get_redis_nm.hset fetch( :artifact_timestamp ), :pack, true
