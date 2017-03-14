@@ -255,6 +255,26 @@ namespace :artifact do
     end
 
     rsync_plugin.get_redis_nm.hset fetch( :artifact_timestamp ), :pack, true
+
+    run_locally do
+      artifact_db   = rsync_plugin.get_redis_nm.keys "*"
+      artifact_disk = capture(:ls, fetch( :cache_path ) ).split
+
+      artifact_disk.each do |disk|
+        execute :rm, "-rf", [fetch( :cache_path ), disk].join( "/" ) unless artifact_db.include?( disk )
+      end
+
+      artifact_db.delete_if { |i| rsync_plugin.get_redis_nm.hget( i, :deploy ) == "true" }
+      artifact_db.map! { |i| i.to_i }
+      artifact_db.sort!
+
+      3.times { artifact_db.pop }
+
+      artifact_db.each do |i|
+        rsync_plugin.get_redis_nm.del i
+        execute :rm, "-rf", [fetch( :cache_path ), i].join( "/" )
+      end
+    end
   end
 
 end
