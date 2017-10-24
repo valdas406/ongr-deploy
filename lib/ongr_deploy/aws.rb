@@ -16,7 +16,7 @@ module OngrDeploy
       running = []
 
       10.times do
-        autoscale = ::Aws::AutoScaling::AutoScalingGroup.new "web app"
+        autoscale = ::Aws::AutoScaling::AutoScalingGroup.new name
 
         pending = []
         running = []
