@@ -12,13 +12,29 @@ module OngrDeploy
         }
       )
 
-      autoscale = ::Aws::AutoScaling::AutoScalingGroup.new name
+      pending = []
+      running = []
 
-      autoscale.instances.each do |i|
-        next if i.lifecycle_state != "InService" || i.health_status != "Healthy"
+      10.times do
+        autoscale = ::Aws::AutoScaling::AutoScalingGroup.new "web app"
 
-        instance = ::Aws::EC2::Instance.new i.id
+        pending = []
+        running = []
 
+        autoscale.instances.each do |i|
+          pending << i if i.lifecycle_state == "Pending"
+          running << i if i.lifecycle_state == "InService" || i.health_status == "Healthy"
+        end
+
+        break if pending.size.zero?
+
+        puts "waiting for pending servers #{pending.size}, running #{running.size}"
+
+        sleep 2
+      end
+
+      running.each do |r|
+        instance = ::Aws::EC2::Instance.new r.id
         server instance.private_ip_address, *args
       end
     end
