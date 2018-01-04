@@ -78,10 +78,14 @@ namespace :rsync do
       on release_roles( :all ) do
         fqdn = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
 
+        merge_log = "MERGING parameters.yml for #{fqdn}: "
+
         Dir.chdir fetch( :artifact_path ) do
           ["parameters.yml.#{fetch :stage}", "parameters.yml.#{fetch :stage}.#{fqdn}"].each do |yml|
             if File.exists? "app/config/#{yml}"
               override = YAML::load File.read "app/config/#{yml}"
+
+              merge_log << "#{yml}, "
 
               unless override
                 fail "SYNTAX ERROR ON YML FILE #{yml}"
@@ -91,6 +95,8 @@ namespace :rsync do
             end
           end
         end
+
+        puts merge_log
 
         content = StringIO.new params.to_yaml
 
