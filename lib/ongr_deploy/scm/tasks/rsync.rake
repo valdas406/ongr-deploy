@@ -2,14 +2,15 @@ require "yaml"
 require "deep_merge"
 
 rsync_plugin = self
+tmp_dir = ENV['TMP_DIR'] || '/tmp'
 
 namespace :rsync do
 
   # Extensions
-
+  
   task :init do
     set :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
-    set :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+    set :cache_path, [tmp_dir, fetch( :cache_namespace )].join( "/" )
 
     artifact_db = rsync_plugin.get_redis_nm.keys "*"
 
@@ -219,7 +220,7 @@ namespace :artifact do
 
   task :init do
     set :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
-    set :cache_path, [fetch( :tmp_dir ), fetch( :cache_namespace )].join( "/" )
+    set :cache_path, [tmp_dir, fetch( :cache_namespace )].join( "/" )
     set :artifact_timestamp, now
     set :artifact_path, [fetch( :cache_path ), fetch( :artifact_timestamp )].join( "/" )
   end
