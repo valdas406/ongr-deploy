@@ -5,7 +5,7 @@ require "deep_merge"
 rsync_plugin = self
 tmp_dir = ENV['TMP_DIR'] || '/tmp'
 
-@content = {}
+$content = {}
 
 namespace :rsync do
 
@@ -101,16 +101,16 @@ namespace :rsync do
           end
         end
 
-        @content[key] = StringIO.new params.to_yaml
+        $content[key] = StringIO.new params.to_yaml
 
         within shared_path do
           if test "[ -f #{shared_path}/app/config/parameters.yml ]"
             execute :cp, "app/config/parameters.yml", "app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
           end
 
-          merge_log << "\nuploading for #{fqdn}[#{key}]"
+          merge_log << "\nUPLOADING for #{fqdn}[#{key}]"
 
-          upload! @content[key], "#{shared_path}/app/config/parameters.yml"
+          upload! $content[key], "#{shared_path}/app/config/parameters.yml"
           execute :chmod, "664", "app/config/parameters.yml"
         end
 
