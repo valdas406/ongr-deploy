@@ -1,13 +1,16 @@
 require "yaml"
+require "digest"
 require "deep_merge"
 
 rsync_plugin = self
 tmp_dir = ENV['TMP_DIR'] || '/tmp'
 
+@content = {}
+
 namespace :rsync do
 
   # Extensions
-  
+
   task :init do
     set :cache_namespace, [fetch(:application), fetch( :stage )].join( "_" )
     set :cache_path, [tmp_dir, fetch( :cache_namespace )].join( "/" )
@@ -78,8 +81,9 @@ namespace :rsync do
 
       on release_roles( :all ) do
         fqdn = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
+        key  = Digest::MD5.hexdigest fqdn
 
-        merge_log = "MERGING parameters.yml for #{fqdn}: "
+        merge_log = "MERGING parameters.yml for #{fqdn}[#{key}]: "
 
         Dir.chdir fetch( :artifact_path ) do
           ["parameters.yml.#{fetch :stage}", "parameters.yml.#{fetch :stage}.#{fqdn}"].each do |yml|
@@ -97,18 +101,20 @@ namespace :rsync do
           end
         end
 
-        puts merge_log
-
-        content = StringIO.new params.to_yaml
+        @content[key] = StringIO.new params.to_yaml
 
         within shared_path do
           if test "[ -f #{shared_path}/app/config/parameters.yml ]"
             execute :cp, "app/config/parameters.yml", "app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
           end
 
-          upload! content, "#{shared_path}/app/config/parameters.yml"
+          merge_log << "\nuploading for #{fqdn}[#{key}]"
+
+          upload! @content[key], "#{shared_path}/app/config/parameters.yml"
           execute :chmod, "664", "app/config/parameters.yml"
         end
+
+        puts merge_log
       end
     end
   end
