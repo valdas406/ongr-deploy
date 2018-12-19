@@ -5,7 +5,7 @@ require "deep_merge"
 rsync_plugin = self
 tmp_dir = ENV['TMP_DIR'] || '/tmp'
 
-$content = {}
+$params_hash = {}
 
 namespace :rsync do
 
@@ -79,11 +79,11 @@ namespace :rsync do
         end
       end
 
-      on release_roles( :all ) do
-        fqdn = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
-        key  = Digest::MD5.hexdigest fqdn
+      on release_roles( :all ), in: :sequence do
+        fqdn     = capture( :hostname, "-f" )[/([a-z\-]+)/,1]
+        host_key = Digest::MD5.hexdigest fqdn
 
-        merge_log = "MERGING parameters.yml for #{fqdn}[#{key}]: "
+        merge_log = "MERGING parameters.yml for #{fqdn}[#{host_key}]: "
 
         Dir.chdir fetch( :artifact_path ) do
           ["parameters.yml.#{fetch :stage}", "parameters.yml.#{fetch :stage}.#{fqdn}"].each do |yml|
@@ -101,16 +101,16 @@ namespace :rsync do
           end
         end
 
-        $content[key] = StringIO.new params.to_yaml
+        $params_hash[host_key] = StringIO.new params.to_yaml
 
         within shared_path do
           if test "[ -f #{shared_path}/app/config/parameters.yml ]"
             execute :cp, "app/config/parameters.yml", "app/config/parameters-#{Time.new.strftime "%Y%m%d%H%M"}.yml"
           end
 
-          merge_log << "\nUPLOADING for #{fqdn}[#{key}]"
+          merge_log << "\nUPLOADING for #{fqdn}[#{host_key}]"
 
-          upload! $content[key], "#{shared_path}/app/config/parameters.yml"
+          upload! $params_hash[host_key], "#{shared_path}/app/config/parameters.yml"
           execute :chmod, "664", "app/config/parameters.yml"
         end
 

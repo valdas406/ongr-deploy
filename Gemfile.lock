@@ -5,10 +5,8 @@ PATH
       aws-sdk (~> 2.6.0)
       capistrano (~> 3.7.0)
       deep_merge (~> 1.0.0)
-      net-ssh (~> 2.8.0)
       redis (~> 3.3.0)
       redis-namespace (~> 1.5.0)
-      sshkit (~> 1.14.0)
 
 GEM
   remote: https://rubygems.org/
@@ -37,12 +35,12 @@ GEM
     jmespath (1.4.0)
     net-scp (1.2.1)
       net-ssh (>= 2.6.5)
-    net-ssh (2.8.0)
+    net-ssh (5.0.2)
     rake (12.3.2)
     redis (3.3.5)
     redis-namespace (1.5.3)
       redis (~> 3.0, >= 3.0.4)
-    sshkit (1.14.0)
+    sshkit (1.18.0)
       net-scp (>= 1.1.2)
       net-ssh (>= 2.8.0)
 
@@ -53,4 +51,4 @@ DEPENDENCIES
   ongr_deploy!
 
 BUNDLED WITH
-   1.16.3
+   1.17.2
