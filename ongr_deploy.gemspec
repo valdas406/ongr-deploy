@@ -18,6 +18,8 @@ Gem::Specification.new do |s|
   s.test_files  = Dir["test/**/*"]
 
   s.add_dependency "capistrano",      "~> 3.7.0"
+  s.add_dependency "sshkit",          "~> 1.14.0"
+  s.add_dependency "net-ssh",         "~> 2.8.0"
   s.add_dependency "redis",           "~> 3.3.0"
   s.add_dependency "redis-namespace", "~> 1.5.0"
   s.add_dependency "aws-sdk",         "~> 2.6.0"
