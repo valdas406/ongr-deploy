@@ -11,6 +11,15 @@ module OngrDeploy
           credentials: ::Aws::Credentials.new( fetch( :aws_id ), fetch( :aws_secret ) )
         }
       )
+      role = fetch(:aws_role_arn, "")
+      unless role.empty?
+        role_credentials = ::Aws::AssumeRoleCredentials.new(
+          client: ::Aws::STS::Client.new(),
+          role_arn: fetch(:aws_role_arn),
+          role_session_name: fetch(:aws_session_name, "capistrano")
+        )
+        ::Aws.config.update({credentials: role_credentials})
+      end
 
       pending = []
       running = []
