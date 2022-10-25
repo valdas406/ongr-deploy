@@ -37,6 +37,7 @@ append :linked_dirs, "app/logs"
 # set :aws_region, "xxx"
 # set :aws_id, "xxx"
 # set :aws_secret, "xxx"
+# set :aws_role_arn, "xxx"
 
 ## Redis Connection
 
